@@ -122,7 +122,6 @@ class PostsViewsContextTest(TestCase):
         response = self.author_client.get(reverse(
             'posts:group_list', kwargs={'slug': self.group.slug}))
         self.post_context_test(response)
-        #response = self.author_client.get(url)
         group = response.context['group']
         fields = {
             group.slug: self.group.slug,
@@ -146,7 +145,6 @@ class PostsViewsContextTest(TestCase):
         response = self.author_client.get(reverse(
             'posts:profile', kwargs={'username': self.author}))
         self.post_context_test(response)
-        #response = self.author_client.get(url)
         author = response.context['author']
         self.assertEqual(author, self.author)
 

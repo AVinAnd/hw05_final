@@ -78,7 +78,7 @@ class PostsURLTests(TestCase):
             f'/posts/{self.post.id}/edit/': '/auth/login/',
             f'/posts/{self.post.id}/comment/':
                 f'/auth/login/?next=/posts/{self.post.id}/comment/',
-            '/follow/': f'/auth/login/?next=/follow/',
+            '/follow/': '/auth/login/?next=/follow/',
             f'/profile/{self.author}/follow/':
                 f'/auth/login/?next=/profile/{self.author}/follow/',
             f'/profile/{self.author}/unfollow/':
