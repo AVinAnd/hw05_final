@@ -1,0 +1,33 @@
+{% extends 'base/form_card.html' %}
+{% block title %}
+  {% if is_edit %}
+    Редактировать запись
+  {% else %}
+    Добавить запись
+  {% endif %}
+{% endblock %}
+{% block card_header %}
+  {% if is_edit %}
+    Редактирование
+  {% else %}
+    Новый пост
+  {% endif %}
+{% endblock %}
+{% block action %}
+  {% if is_edit %}
+    action="{% url 'posts:post_edit' form.instance.id %}"
+  {% else %}
+    action="{% url 'posts:post_create' %}"
+  {% endif %}
+{% endblock %}
+{% block button %}
+  <div class="d-flex justify-content-end">
+    <button type="submit" class="btn btn-primary">
+      {% if is_edit %}
+        Сохранить
+      {% else %}
+        Добавить
+      {% endif %}
+    </button>
+  </div>
+{% endblock %}

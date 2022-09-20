@@ -1,0 +1,14 @@
+{% extends "base/form_card.html" %}
+{% block title %}Войти{% endblock %}
+{% block card_header %}Войти на сайт{% endblock %}
+{% block action %}
+  {% if action_url %}
+    action="{% url action_url %}"
+  {% endif %}
+{% endblock %}
+{% block button %}
+  <div class="col-md-6 offset-md-4">
+    <button type="submit" class="btn btn-primary">Войти</button>
+    <a href="{% url 'users:password_reset_form' %}" class="btn btn-link">Забыли пароль?</a>
+  </div>
+{% endblock %}
