@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from yatube.posts.models import Post, Group, User, Comment
+from posts.models import Post, Group, User, Comment
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 TEST_IMAGE = SimpleUploadedFile(

@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from yatube.posts.models import Post, Group, User, CHARS_IN_STR
+from posts.models import Post, Group, User, CHARS_IN_STR
 
 
 class PostModelTest(TestCase):

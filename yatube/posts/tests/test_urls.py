@@ -3,7 +3,7 @@ from http import HTTPStatus
 from django.test import TestCase, Client
 from django.core.cache import cache
 
-from yatube.posts.models import Post, Group, User
+from posts.models import Post, Group, User
 
 
 class PostsURLTests(TestCase):

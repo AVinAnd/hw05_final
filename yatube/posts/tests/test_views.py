@@ -5,8 +5,8 @@ from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.core.cache import cache
 
-from yatube.posts.models import Post, Group, User, Comment, Follow
-from yatube.posts.views import POSTS_ON_SCREEN
+from posts.models import Post, Group, User, Comment, Follow
+from posts.views import POSTS_ON_SCREEN
 
 from .test_forms import TEST_IMAGE, TEMP_MEDIA_ROOT
 
