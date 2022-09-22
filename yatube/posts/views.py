@@ -20,7 +20,7 @@ def add_paginator(request, object_list, per_page=POSTS_ON_SCREEN):
 def index(request):
     post_list = Post.objects.select_related('author').all()
     context = {
-        'page_obj': add_paginator(request, post_list)
+        'page_obj': add_paginator(request, post_list),
     }
     return render(request, 'posts/index.html', context)
 
@@ -122,7 +122,7 @@ def add_comment(request, post_id):
 @login_required()
 def follow_index(request):
     post_list = Post.objects.select_related('author').all()
-    followings = list(Follow.objects.filter(
+    followings = list(Follow.objects.select_related('author').filter(
         user=request.user
     ).values_list('author'))
     list_id = [following_id[0] for following_id in followings]
@@ -136,12 +136,9 @@ def follow_index(request):
 @login_required()
 def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
-    if request.user == author or Follow.objects.filter(
-        user=request.user,
-        author=author
-    ).exists():
+    if request.user == author:
         return redirect('posts:profile', username=username)
-    Follow.objects.create(
+    Follow.objects.get_or_create(
         user=request.user,
         author=author
     )

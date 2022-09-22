@@ -1,6 +1,6 @@
 {% extends 'base/base.html' %}
 {% block content %}
-  {% include 'includes/switcher.html' %}
+  {% include 'includes/switcher.html' with index=True %}
   <h1>Последние обновления на сайте</h1>
   {% for post in page_obj %}
     {% include 'includes/post_card.html' %}

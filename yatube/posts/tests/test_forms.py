@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from ..models import Post, Group, User, Comment
+from yatube.posts.models import Post, Group, User, Comment
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 TEST_IMAGE = SimpleUploadedFile(
@@ -48,6 +48,18 @@ class PostsFormsTest(TestCase):
         self.author_client = Client()
         self.author_client.force_login(self.author)
 
+    def test_not_auth_user_create_post(self):
+        """неавторизированный пользователь не может создать пост"""
+        posts = Post.objects.all().count()
+        form_data = {'text': 'test post'}
+        self.client.post(
+            reverse('posts:post_create'),
+            data=form_data,
+            follow=True
+        )
+        new_posts = Post.objects.all().count()
+        self.assertEqual(new_posts, posts)
+
     def test_form_post_create(self):
         """создается новый пост"""
         posts_id = list(Post.objects.values_list('id', flat=True))
@@ -68,14 +80,17 @@ class PostsFormsTest(TestCase):
         self.assertEqual(Post.objects.count(), posts_count + 1)
         self.assertRedirects(response, reverse(
             'posts:profile', kwargs={'username': self.author}))
-        self.assertTrue(
-            Post.objects.filter(
-                text=form_data.get('text'),
-                group=form_data.get('group'),
-                author=form_data.get('author'),
-                image='posts/img.jpg'
-            ).exists()
-        )
+        last_post_values_list = last_post.values_list().values()
+        last_post_values = [value for value in last_post_values_list][0]
+        values = {
+            last_post_values['text']: form_data['text'],
+            last_post_values['group_id']: form_data['group'],
+            last_post_values['author_id']: form_data['author'],
+            last_post_values['image']: f'posts/{form_data["image"].name}',
+        }
+        for value, expected_value in values.items():
+            with self.subTest(value=value):
+                self.assertEqual(value, expected_value)
 
     def test_form_post_edit(self):
         """редактируется существующий пост"""

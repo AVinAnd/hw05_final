@@ -3,7 +3,7 @@
   Избранное
 {% endblock %}
 {% block content %}
-  {% include 'includes/switcher.html' %}
+  {% include 'includes/switcher.html' with follow=True %}
   <h1>Избранное</h1>
   {% for post in page_obj %}
     {% include 'includes/post_card.html' %}

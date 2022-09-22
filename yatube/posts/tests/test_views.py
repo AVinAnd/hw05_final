@@ -5,9 +5,13 @@ from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.core.cache import cache
 
-from ..models import Post, Group, User, Comment, Follow
-from ..views import POSTS_ON_SCREEN
+from yatube.posts.models import Post, Group, User, Comment, Follow
+from yatube.posts.views import POSTS_ON_SCREEN
+
 from .test_forms import TEST_IMAGE, TEMP_MEDIA_ROOT
+
+FIRST_PAGE_RECORDS = POSTS_ON_SCREEN
+SECOND_PAGE_RECORDS = 3
 
 
 class PostsViewsTemplateTests(TestCase):
@@ -213,17 +217,59 @@ class PostsViewsContextTest(TestCase):
         content = response.content
         self.assertNotEqual(test_content, content)
 
+    def test_auth_user_comment(self):
+        """авторизированный пользователь может комментировать записи"""
+        comments_before = Comment.objects.all().count()
+        comment_data = {'text': 'test comment'}
+        self.user_client.post(
+            reverse('posts:add_comment', kwargs={'post_id': self.post.id}),
+            data=comment_data,
+            follow=True
+        )
+        comments_after = Comment.objects.all().count()
+        self.assertEqual(comments_after, comments_before + 1)
+
+    def test_not_auth_user_comment(self):
+        """неавторизированный пользователь не может комментировать записи"""
+        comments_before = Comment.objects.all().count()
+        comment_data = {'text': 'test comment'}
+        self.client.post(
+            reverse('posts:add_comment', kwargs={'post_id': self.post.id}),
+            data=comment_data,
+            follow=True
+        )
+        comments_after = Comment.objects.all().count()
+        self.assertEqual(comments_after, comments_before)
+
     def test_follow_index_context(self):
         """в follow_index передан правильный context"""
         self.post_context_test(self.user_client.get(reverse(
             'posts:follow_index')))
 
+    def test_auth_user_follow(self):
+        """пользователь может подписываться и отписываться"""
+        start_follows = Follow.objects.count()
+        self.user2_client.get(
+            reverse('posts:profile_follow',
+                    kwargs={'username': self.author}),
+            follow=True
+        )
+        new_follow = Follow.objects.count()
+        self.assertEqual(new_follow, start_follows + 1)
+        self.user_client.get(
+            reverse('posts:profile_unfollow',
+                    kwargs={'username': self.author}),
+            follow=True
+        )
+        new_unfollow = Follow.objects.count()
+        self.assertEqual(new_unfollow, start_follows)
+
     def test_following_post(self):
         """пост появляется в избранном только у фолловеров"""
         response = self.user_client.get(reverse('posts:follow_index'))
-        self.assertEqual(len(response.context['page_obj']), 1)
+        self.assertEqual(response.context['page_obj'].count(self.post), 1)
         response = self.user2_client.get(reverse('posts:follow_index'))
-        self.assertEqual(len(response.context['page_obj']), 0)
+        self.assertEqual(response.context['page_obj'].count(self.post), 0)
 
 
 class PaginatorTests(TestCase):
@@ -241,7 +287,7 @@ class PaginatorTests(TestCase):
                 text=f'test text {num}',
                 author=cls.author,
                 group=cls.group
-            ) for num in range(13)
+            ) for num in range(FIRST_PAGE_RECORDS + SECOND_PAGE_RECORDS)
         ]
         Post.objects.bulk_create(posts)
 
