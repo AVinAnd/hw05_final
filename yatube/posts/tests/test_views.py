@@ -9,7 +9,7 @@ from django.db.models.query import QuerySet
 
 from posts.models import Post, Group, User, Comment, Follow
 from posts.views import POSTS_ON_SCREEN
-from ..forms import PostForm
+from posts.forms import PostForm
 
 from .test_forms import TEST_IMAGE, TEMP_MEDIA_ROOT
 
