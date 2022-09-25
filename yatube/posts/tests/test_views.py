@@ -4,9 +4,12 @@ from django import forms
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.core.cache import cache
+from django.core.paginator import Page
+from django.db.models.query import QuerySet
 
 from posts.models import Post, Group, User, Comment, Follow
 from posts.views import POSTS_ON_SCREEN
+from ..forms import PostForm
 
 from .test_forms import TEST_IMAGE, TEMP_MEDIA_ROOT
 
@@ -105,7 +108,10 @@ class PostsViewsContextTest(TestCase):
     def post_context_test(self, path_name):
         """функция проверки контекста постов в тестах"""
         response = path_name
+        self.assertIn('page_obj', response.context)
+        self.assertIsInstance(response.context['page_obj'], Page)
         post = response.context['page_obj'][0]
+        self.assertIsInstance(post, Post)
         fields = {
             post.text: self.post.text,
             post.author: self.author,
@@ -126,7 +132,9 @@ class PostsViewsContextTest(TestCase):
         response = self.author_client.get(reverse(
             'posts:group_list', kwargs={'slug': self.group.slug}))
         self.post_context_test(response)
+        self.assertIn('group', response.context)
         group = response.context['group']
+        self.assertIsInstance(group, Group)
         fields = {
             group.slug: self.group.slug,
             group.title: self.group.title,
@@ -142,6 +150,8 @@ class PostsViewsContextTest(TestCase):
         response = self.author_client.get(
             reverse('posts:group_list',
                     kwargs={'slug': self.empty_group.slug}))
+        self.assertIn('page_obj', response.context)
+        self.assertIsInstance(response.context['page_obj'], Page)
         self.assertEqual(len(response.context['page_obj']), 0)
 
     def test_profile_context(self):
@@ -149,30 +159,43 @@ class PostsViewsContextTest(TestCase):
         response = self.author_client.get(reverse(
             'posts:profile', kwargs={'username': self.author}))
         self.post_context_test(response)
+        self.assertIn('author', response.context)
         author = response.context['author']
+        self.assertIsInstance(author, User)
         self.assertEqual(author, self.author)
 
     def test_post_in_right_profile(self):
         """пост не публикуется в чужом профайле"""
         response = self.author_client.get(
             reverse('posts:profile', kwargs={'username': self.user}))
+        self.assertIn('page_obj', response.context)
+        self.assertIsInstance(response.context['page_obj'], Page)
         self.assertEqual(len(response.context['page_obj']), 0)
 
     def test_post_details_context(self):
         """в post_details передан правильный context"""
         response = self.author_client.get(
             reverse('posts:post_details', kwargs={'post_id': self.post.id}))
+        context_vars = ['post', 'comments']
+        for var in context_vars:
+            with self.subTest(var=var):
+                self.assertIn(var, response.context)
         post = response.context['post']
-        comments = response.context['comments'][0]
+        self.assertIsInstance(post, Post)
+        comments = response.context['comments']
+        self.assertIsInstance(comments, QuerySet)
+        self.assertNotEqual(comments, 0)
+        comment = response.context['comments'][0]
+        self.assertIsInstance(comment, Comment)
         fields = {
             post.text: self.post.text,
             post.author: self.author,
             post.group: self.group,
             post.id: self.post.id,
             post.image: self.post.image,
-            comments.text: self.comment.text,
-            comments.author: self.comment.author,
-            comments.post: self.comment.post,
+            comment.text: self.comment.text,
+            comment.author: self.comment.author,
+            comment.post: self.comment.post,
         }
         for field, expected_value in fields.items():
             with self.subTest(field=field):
@@ -181,6 +204,8 @@ class PostsViewsContextTest(TestCase):
     def test_post_create_context(self):
         """в post_create передан правильный context"""
         response = self.author_client.get(reverse('posts:post_create'))
+        self.assertIn('form', response.context)
+        self.assertIsInstance(response.context.get('form'), PostForm)
         form_fields = {
             'text': forms.fields.CharField,
             'group': forms.fields.ChoiceField,
@@ -194,6 +219,11 @@ class PostsViewsContextTest(TestCase):
         """в post_edit передан правильный context"""
         response = self.author_client.get(
             reverse('posts:post_edit', kwargs={'post_id': self.post.id}))
+        context_vars = ['form', 'is_edit']
+        for var in context_vars:
+            with self.subTest(var=var):
+                self.assertIn(var, response.context)
+        self.assertIsInstance(response.context.get('form'), PostForm)
         form_fields = {
             'text': forms.fields.CharField,
             'group': forms.fields.ChoiceField,
@@ -202,6 +232,7 @@ class PostsViewsContextTest(TestCase):
             with self.subTest(field=field):
                 form_field = response.context.get('form').fields.get(field)
                 self.assertIsInstance(form_field, expected_value)
+        self.assertIsInstance(response.context.get('is_edit'), bool)
         self.assertTrue(response.context.get('is_edit'))
 
     def test_index_cache(self):
@@ -266,10 +297,16 @@ class PostsViewsContextTest(TestCase):
 
     def test_following_post(self):
         """пост появляется в избранном только у фолловеров"""
-        response = self.user_client.get(reverse('posts:follow_index'))
-        self.assertEqual(response.context['page_obj'].count(self.post), 1)
-        response = self.user2_client.get(reverse('posts:follow_index'))
-        self.assertEqual(response.context['page_obj'].count(self.post), 0)
+        responses = {
+            self.user_client.get(reverse('posts:follow_index')): 1,
+            self.user2_client.get(reverse('posts:follow_index')): 0,
+        }
+        for response, count in responses.items():
+            with self.subTest(response=response):
+                self.assertIn('page_obj', response.context)
+                self.assertIsInstance(response.context.get('page_obj'), Page)
+                self.assertEqual(response.context['page_obj'].count(self.post),
+                                 count)
 
 
 class PaginatorTests(TestCase):
@@ -298,27 +335,27 @@ class PaginatorTests(TestCase):
 
     def test_paginator_pages(self):
         """на страницы выводится правильное количество записей"""
-        first_page_records = POSTS_ON_SCREEN
-        second_page_records = 3
         fields = {
-            reverse('posts:index'): first_page_records,
-            reverse('posts:index') + '?page=2': second_page_records,
+            reverse('posts:index'): FIRST_PAGE_RECORDS,
+            reverse('posts:index') + '?page=2': SECOND_PAGE_RECORDS,
             reverse('posts:group_list',
                     kwargs={'slug': self.group.slug}
-                    ): first_page_records,
+                    ): FIRST_PAGE_RECORDS,
             reverse('posts:group_list',
                     kwargs={'slug': self.group.slug}
-                    ) + '?page=2': second_page_records,
+                    ) + '?page=2': SECOND_PAGE_RECORDS,
             reverse('posts:profile',
                     kwargs={'username': self.author}
-                    ): first_page_records,
+                    ): FIRST_PAGE_RECORDS,
             reverse('posts:profile',
                     kwargs={'username': self.author}
-                    ) + '?page=2': second_page_records,
+                    ) + '?page=2': SECOND_PAGE_RECORDS,
         }
         for path, records in fields.items():
             with self.subTest(path=path):
                 response = self.author_client.get(path)
+                self.assertIn('page_obj', response.context)
+                self.assertIsInstance(response.context['page_obj'], Page)
                 self.assertEqual(len(response.context['page_obj']), records)
 
     def paginator_create_post(self, path):
@@ -329,7 +366,10 @@ class PaginatorTests(TestCase):
             group=self.group
         )
         response = self.author_client.get(path)
+        self.assertIn('page_obj', response.context)
+        self.assertIsInstance(response.context['page_obj'], Page)
         post = response.context['page_obj'][0]
+        self.assertIsInstance(post, Post)
         fields = {
             post.text: new_post.text,
             post.author: new_post.author,

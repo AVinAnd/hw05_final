@@ -80,13 +80,11 @@ class PostsFormsTest(TestCase):
         self.assertEqual(Post.objects.count(), posts_count + 1)
         self.assertRedirects(response, reverse(
             'posts:profile', kwargs={'username': self.author}))
-        last_post_values_list = last_post.values_list().values()
-        last_post_values = [value for value in last_post_values_list][0]
         values = {
-            last_post_values['text']: form_data['text'],
-            last_post_values['group_id']: form_data['group'],
-            last_post_values['author_id']: form_data['author'],
-            last_post_values['image']: f'posts/{form_data["image"].name}',
+            last_post[0].text: form_data['text'],
+            last_post[0].group.id: form_data['group'],
+            last_post[0].author.id: form_data['author'],
+            last_post[0].image: f'posts/{form_data["image"].name}',
         }
         for value, expected_value in values.items():
             with self.subTest(value=value):
