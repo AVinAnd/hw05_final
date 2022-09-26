@@ -176,7 +176,7 @@ class PostsViewsContextTest(TestCase):
         """в post_details передан правильный context"""
         response = self.author_client.get(
             reverse('posts:post_details', kwargs={'post_id': self.post.id}))
-        context_vars = ['post', 'comments']
+        context_vars = ('post', 'comments')
         for var in context_vars:
             with self.subTest(var=var):
                 self.assertIn(var, response.context)
@@ -219,7 +219,7 @@ class PostsViewsContextTest(TestCase):
         """в post_edit передан правильный context"""
         response = self.author_client.get(
             reverse('posts:post_edit', kwargs={'post_id': self.post.id}))
-        context_vars = ['form', 'is_edit']
+        context_vars = ('form', 'is_edit')
         for var in context_vars:
             with self.subTest(var=var):
                 self.assertIn(var, response.context)

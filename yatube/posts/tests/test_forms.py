@@ -117,7 +117,7 @@ class PostsFormsTest(TestCase):
 
     def test_add_comment(self):
         """добавляется комментарий к посту"""
-        comments_count = Comment.objects.filter(post=self.post).count()
+        comments_count = self.post.comments.count()
         form_data = {'text': 'test comment'}
         response = self.author_client.post(
             reverse('posts:add_comment', kwargs={'post_id': self.post.id}),
